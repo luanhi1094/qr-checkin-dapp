@@ -1,0 +1,160 @@
+'use client';
+
+import React from 'react';
+
+import { useCurrentAccount } from '@iota/dapp-kit';
+import { useGetEvent, useHasCheckedIn } from '@/hooks/useContract';
+import Link from 'next/link';
+import { useState } from 'react';
+
+export default function EventPage() {
+  const account = useCurrentAccount();
+  const [eventId, setEventId] = useState<string>('');
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  const { data: event, isLoading: eventLoading } = useGetEvent(selectedEventId);
+  const { data: hasCheckedIn, isLoading: checkInLoading } = useHasCheckedIn(
+    selectedEventId,
+    account?.address || null
+  );
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (eventId.trim()) {
+      setSelectedEventId(eventId);
+    }
+  };
+
+  if (!account) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h2 className="text-lg font-bold text-yellow-800 mb-2">⚠️ Kết nối ví Iota</h2>
+            <p className="text-yellow-700">
+              Vui lòng kết nối ví Iota Firefly của bạn để kiểm tra trạng thái check-in.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-800">✅ Kiểm Tra Check-in</h1>
+          <Link
+            href="/"
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+          >
+            ← Quay lại
+          </Link>
+        </div>
+
+        {/* Search Form */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-6">Tìm Sự Kiện</h2>
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Event ID
+              </label>
+              <input
+                type="text"
+                value={eventId}
+                onChange={(e) => setEventId(e.target.value)}
+                placeholder="Nhập Event ID"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition"
+            >
+              🔍 Tìm Sự Kiện
+            </button>
+          </form>
+        </div>
+
+        {/* Event Status */}
+        {selectedEventId && (
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Trạng Thái</h2>
+
+            {eventLoading ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">⏳ Đang tải...</p>
+              </div>
+            ) : event ? (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-800">
+                    📋 {typeof event === 'object' && 'name' in event ? (event as any).name : 'Event'}
+                  </h3>
+                  <p className="text-gray-600 mt-2">Event ID: {selectedEventId}</p>
+                </div>
+
+                <div className={`rounded-lg p-6 text-center font-bold text-lg transition ${
+                  checkInLoading ? 'bg-gray-100 text-gray-600' : hasCheckedIn
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {checkInLoading ? (
+                    '⏳ Đang kiểm tra...'
+                  ) : hasCheckedIn ? (
+                    '✅ Bạn đã check-in sự kiện này'
+                  ) : (
+                    '❌ Bạn chưa check-in sự kiện này'
+                  )}
+                </div>
+
+                {!hasCheckedIn && !checkInLoading && (
+                  <p className="text-center text-gray-600 text-sm">
+                    👉 Truy cập trang <Link href="/scan" className="text-blue-600 hover:underline">Quét QR Code</Link> để check-in ngay
+                  </p>
+                )}
+
+                <button
+                  onClick={() => {
+                    setSelectedEventId(null);
+                    setEventId('');
+                  }}
+                  className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-medium transition"
+                >
+                  Tìm Sự Kiện Khác
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-red-600 font-semibold">❌ Không tìm thấy sự kiện</p>
+                <p className="text-gray-600 text-sm mt-2">Vui lòng kiểm tra Event ID và thử lại</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!selectedEventId && (
+          <div className="bg-gray-100 rounded-lg p-12 text-center">
+            <p className="text-gray-600 text-lg">
+              Nhập Event ID để kiểm tra trạng thái check-in
+            </p>
+          </div>
+        )}
+
+        {/* Info Card */}
+        <div className="mt-8 bg-indigo-50 rounded-lg p-6 border border-indigo-200">
+          <h3 className="font-bold text-indigo-900 mb-2">ℹ️ Lưu ý</h3>
+          <ul className="text-sm text-indigo-800 space-y-1">
+            <li>• Địa chỉ ví của bạn: <code className="bg-white px-2 py-1 rounded">{account?.address?.slice(0, 10)}...</code></li>
+            <li>• Mỗi ví chỉ có thể check-in một lần cho mỗi sự kiện</li>
+            <li>• Dữ liệu check-in được lưu trữ trên blockchain Iota</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}

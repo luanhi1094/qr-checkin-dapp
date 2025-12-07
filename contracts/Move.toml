@@ -1,0 +1,10 @@
+[package]
+name = "qr_checkin_dapp"
+edition = "2024"
+version = "0.0.1"
+
+[dependencies]
+Iota = { git = "https://github.com/iotaledger/iota", subdir = "crates/iota-framework/packages/iota-framework", rev = "develop" }
+
+[addresses]
+qr_checkin_dapp = "0x0"

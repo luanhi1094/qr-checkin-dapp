@@ -1,0 +1,198 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useCurrentAccount } from '@iota/dapp-kit';
+import { useCreateEvent } from '@/hooks/useContract';
+import { QRGenerator } from '@/components/QRGenerator';
+import Link from 'next/link';
+
+interface Event {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+}
+
+export default function AdminPage() {
+  const account = useCurrentAccount();
+  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [events, setEvents] = useState<Event[]>([]);
+  const [createdEventId, setCreatedEventId] = useState<string | null>(null);
+
+  const { createEvent, isPending } = useCreateEvent();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      alert('Vui lòng nhập tên sự kiện');
+      return;
+    }
+
+    try {
+      const result = await createEvent(formData.name, formData.description);
+
+      if (result) {
+        // Simulate event ID from transaction (in real app, fetch from blockchain)
+        const newEventId = Date.now().toString();
+        const newEvent: Event = {
+          id: newEventId,
+          name: formData.name,
+          description: formData.description,
+          createdAt: new Date().toLocaleString('vi-VN'),
+        };
+
+        setEvents([newEvent, ...events]);
+        setCreatedEventId(newEventId);
+        setFormData({ name: '', description: '' });
+        alert('✅ Sự kiện được tạo thành công!');
+      }
+    } catch (error) {
+      alert(`❌ Lỗi: ${error instanceof Error ? error.message : 'Không xác định'}`);
+    }
+  };
+
+  if (!account) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h2 className="text-lg font-bold text-yellow-800 mb-2">⚠️ Kết nối ví Iota</h2>
+            <p className="text-yellow-700">
+              Vui lòng kết nối ví Iota Firefly của bạn để truy cập trang Admin.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-800">📋 Admin Dashboard</h1>
+          <Link
+            href="/"
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+          >
+            ← Quay lại
+          </Link>
+        </div>
+
+        {/* Create Event Form */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6">Tạo Sự Kiện Mới</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-base font-bold text-gray-700 mb-3">
+                Tên Sự Kiện *
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="VD: Hội Thảo Web3 2025"
+                className="w-full px-4 py-3 text-lg text-gray-900 font-semibold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                disabled={isPending}
+              />
+            </div>
+
+            <div>
+              <label className="block text-base font-bold text-gray-700 mb-3">
+                Mô Tả
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="heheheh"
+                className="w-full px-4 py-3 text-lg text-gray-900 font-semibold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-32 placeholder:text-gray-400"
+                disabled={isPending}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mô Tả
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Nhập mô tả sự kiện (tuỳ chọn)"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                disabled={isPending}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 font-medium transition"
+            >
+              {isPending ? '⏳ Đang tạo...' : '✨ Tạo Sự Kiện'}
+            </button>
+          </form>
+        </div>
+
+        {/* QR Code Display */}
+        {createdEventId && (
+          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">📱 QR Code Sự Kiện</h2>
+            <div className="flex flex-col items-center gap-4">
+              <div className="bg-gray-50 p-8 rounded-lg border-2 border-gray-200">
+                <QRGenerator eventId={createdEventId} />
+              </div>
+              <p className="text-gray-600 text-center">
+                Chia sẻ QR code này để mọi người có thể check-in sự kiện
+              </p>
+              <button
+                onClick={() => {
+                  const link = document.querySelector('canvas') as HTMLCanvasElement;
+                  if (link) {
+                    const url = link.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qr-event-${createdEventId}.png`;
+                    a.click();
+                  }
+                }}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+              >
+                ⬇️ Tải QR Code
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Events List */}
+        {events.length > 0 && (
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Danh Sách Sự Kiện</h2>
+
+            <div className="space-y-4">
+              {events.map((event) => (
+                <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                  <h3 className="font-semibold text-lg text-gray-800">{event.name}</h3>
+                  <p className="text-gray-600 text-sm">{event.description || 'Không có mô tả'}</p>
+                  <p className="text-gray-500 text-xs mt-2">
+                    ID: {event.id} | Tạo: {event.createdAt}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {events.length === 0 && !createdEventId && (
+          <div className="bg-gray-100 rounded-lg p-12 text-center">
+            <p className="text-gray-600 text-lg">
+              Chưa có sự kiện nào. Tạo một sự kiện mới ở trên!
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
