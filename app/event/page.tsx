@@ -10,7 +10,7 @@ import { useState } from 'react';
 export default function EventPage() {
   const account = useCurrentAccount();
   const [eventId, setEventId] = useState<string>('');
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<bigint | null>(null);
 
   const { data: event, isLoading: eventLoading } = useGetEvent(selectedEventId);
   const { data: hasCheckedIn, isLoading: checkInLoading } = useHasCheckedIn(
@@ -21,7 +21,7 @@ export default function EventPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (eventId.trim()) {
-      setSelectedEventId(eventId);
+      setSelectedEventId(BigInt(eventId));
     }
   };
 
