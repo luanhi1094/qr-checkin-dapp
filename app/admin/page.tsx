@@ -141,7 +141,7 @@ export default function AdminPage() {
             <h2 className="text-2xl font-bold text-gray-800 mb-6">📱 QR Code Sự Kiện</h2>
             <div className="flex flex-col items-center gap-4">
               <div className="bg-gray-50 p-8 rounded-lg border-2 border-gray-200">
-                <QRGenerator eventId={createdEventId} />
+                <QRGenerator eventId={createdEventId ? parseInt(createdEventId) : 0} />
               </div>
               <p className="text-gray-600 text-center">
                 Chia sẻ QR code này để mọi người có thể check-in sự kiện
