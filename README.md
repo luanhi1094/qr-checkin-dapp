@@ -1,29 +1,65 @@
 # 🔗 QR Check-in dApp - Iota Blockchain
 
-> A decentralized QR code check-in system powered by Iota blockchain and Move smart contracts
+> A decentralized QR code check-in system powered by Iota blockchain, Node.js backend, and MongoDB database
 
 [![Iota](https://img.shields.io/badge/Blockchain-Iota_Testnet-blue?logo=iota)](https://iota.org)
 [![Next.js](https://img.shields.io/badge/Framework-Next.js_16-black?logo=next.js)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react)](https://react.dev)
-[![Move](https://img.shields.io/badge/Smart_Contract-Move-4CAF50)](https://move-language.github.io)
+[![Node.js](https://img.shields.io/badge/Backend-Node.js_Express-68A063?logo=node.js)](https://nodejs.org)
+[![MongoDB](https://img.shields.io/badge/Database-MongoDB-13AA52?logo=mongodb)](https://www.mongodb.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+## Tech Stack 🛠️
+
+- **Frontend**: Next.js 16 + React 19 + TypeScript + Turbopack
+- **Backend**: Node.js + Express + MongoDB Atlas
+- **Blockchain**: Iota L1 + Firefly Wallet
+- **Database**: MongoDB (cloud-hosted)
+- **Styling**: Tailwind CSS
 
 ## 🌟 Features
 
 - ✅ **Web3 Wallet Integration** - Connect with Iota Wallet or Firefly
-- ✅ **Event Management** - Create and manage check-in events
+- ✅ **Event Management** - Create and manage check-in events (backend-powered)
 - ✅ **QR Code Scanning** - Scan QR codes for instant check-in
-- ✅ **Blockchain Verification** - All check-ins recorded on Iota blockchain
-- ✅ **Real-time Participant Tracking** - View event attendance in real-time
-- ✅ **Smart Contract Protection** - Immutable records via Move smart contracts
+- ✅ **Real-time Participant Tracking** - View event attendance with backend sync
+- ✅ **Database Persistence** - All events and check-ins stored in MongoDB
+- ✅ **REST API Backend** - Node.js/Express API for event management
 - ✅ **Responsive Design** - Works on desktop and mobile devices
 - ✅ **TypeScript Support** - Full type safety throughout the application
+
+## 🔗 Backend Integration
+
+This dApp is **fully connected** to a Node.js backend with MongoDB:
+
+### API Endpoints Used
+```
+GET    /api/events                       # Get all events
+GET    /api/events/:eventId              # Get event details
+POST   /api/events                       # Create new event
+POST   /api/events/:eventId/checkin      # Record participant check-in
+GET    /api/events/:eventId/participants # Get event participants
+DELETE /api/events/:eventId              # Delete event
+```
+
+### Data Persistence
+- Events are **stored in MongoDB Atlas**
+- Participants automatically recorded on check-in
+- Real-time participant list synced from backend
+- All data persists across sessions
+
+### API Service
+**File**: `lib/api.ts`
+- Type-safe API calls with TypeScript
+- Handles all event and check-in operations
+- Error handling and loading states
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+ and npm/yarn
 - Browser with Iota Wallet or Firefly extension
+- Backend server running on http://localhost:5000
 - 10+ IOTA testnet tokens (get from [faucet](https://faucet.testnet.iota.cafe))
 
 ### Installation
