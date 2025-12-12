@@ -1,54 +1,85 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCurrentAccount } from '@iota/dapp-kit';
-import { useCreateEvent } from '@/hooks/useContract';
+import { qrCheckInAPI } from '@/lib/api';
 import { QRGenerator } from '@/components/QRGenerator';
 import Link from 'next/link';
 
 interface Event {
-  id: string;
+  _id?: string;
+  eventId: string;
   name: string;
-  description: string;
-  createdAt: string;
+  description?: string;
+  createdBy?: string;
+  createdAt?: string;
+  participants?: any[];
 }
 
 export default function AdminPage() {
   const account = useCurrentAccount();
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', location: '' });
   const [events, setEvents] = useState<Event[]>([]);
   const [createdEventId, setCreatedEventId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { createEvent, isPending } = useCreateEvent();
+  // Load events on mount
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const data = await qrCheckInAPI.getEvents();
+      setEvents(data);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to load events';
+      setError(errorMsg);
+      console.error('Error loading events:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
     if (!formData.name.trim()) {
       alert('Vui lòng nhập tên sự kiện');
       return;
     }
 
-    try {
-      const result = await createEvent(formData.name, formData.description);
-
-      if (result) {
-        // Simulate event ID from transaction (in real app, fetch from blockchain)
-        const newEventId = Date.now().toString();
-        const newEvent: Event = {
-          id: newEventId,
-          name: formData.name,
-          description: formData.description,
-          createdAt: new Date().toLocaleString('vi-VN'),
-        };
-
-        setEvents([newEvent, ...events]);
-        setCreatedEventId(newEventId);
-        setFormData({ name: '', description: '' });
-        alert('✅ Sự kiện được tạo thành công!');
-      }
-    } catch (error) {
-      alert(`❌ Lỗi: ${error instanceof Error ? error.message : 'Không xác định'}`);
+    if (!account?.address) {
+      alert('Vui lòng kết nối ví trước');
+      return;
     }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Generate unique event ID
+      const newEventId = Date.now().toString();
+
+      // Create event via API
+      const result = await qrCheckInAPI.createEvent(
+        newEventId,
+        formData.name,
+        formData.description,
+        formData.location,
+        account.address
+      );
+
+      setEvents([result, ...events]);
+      setCreatedEventId(newEventId);
+      setFormData({ name: '', description: '', location: '' });
+      alert('✅ Sự kiện được tạo thành công!');
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create event';
+      setError(errorMsg);
+      alert(`❌ Lỗi: ${errorMsg}`);    }
   };
 
   if (!account) {
@@ -95,7 +126,7 @@ export default function AdminPage() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="VD: Hội Thảo Web3 2025"
                 className="w-full px-4 py-3 text-lg text-gray-900 font-semibold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
-                disabled={isPending}
+                disabled={loading}
               />
             </div>
 
@@ -106,31 +137,32 @@ export default function AdminPage() {
               <textarea
                 value={formData.description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="heheheh"
+                placeholder="Nhập mô tả sự kiện"
                 className="w-full px-4 py-3 text-lg text-gray-900 font-semibold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-32 placeholder:text-gray-400"
-                disabled={isPending}
+                disabled={loading}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mô Tả
+              <label className="block text-base font-bold text-gray-700 mb-3">
+                Địa Điểm
               </label>
-              <textarea
-                value={formData.description}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Nhập mô tả sự kiện (tuỳ chọn)"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
-                disabled={isPending}
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="VD: Hà Nội, Việt Nam"
+                className="w-full px-4 py-3 text-lg text-gray-900 font-semibold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                disabled={loading}
               />
             </div>
 
             <button
               type="submit"
-              disabled={isPending}
-              className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 font-medium transition"
+              disabled={loading}
+              className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 font-medium transition text-lg"
             >
-              {isPending ? '⏳ Đang tạo...' : '✨ Tạo Sự Kiện'}
+              {loading ? '⏳ Đang tạo...' : '✨ Tạo Sự Kiện'}
             </button>
           </form>
         </div>
@@ -172,11 +204,11 @@ export default function AdminPage() {
 
             <div className="space-y-4">
               {events.map((event) => (
-                <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                <div key={event.eventId} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                   <h3 className="font-semibold text-lg text-gray-800">{event.name}</h3>
                   <p className="text-gray-600 text-sm">{event.description || 'Không có mô tả'}</p>
                   <p className="text-gray-500 text-xs mt-2">
-                    ID: {event.id} | Tạo: {event.createdAt}
+                    ID: {event.eventId} | Tạo: {event.createdAt || new Date().toLocaleString('vi-VN')}
                   </p>
                 </div>
               ))}

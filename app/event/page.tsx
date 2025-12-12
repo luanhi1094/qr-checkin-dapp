@@ -1,29 +1,60 @@
 'use client';
 
-import React from 'react';
-
+import React, { useState, useEffect } from 'react';
 import { useCurrentAccount } from '@iota/dapp-kit';
-import { useGetEvent, useHasCheckedIn } from '@/hooks/useContract';
+import { qrCheckInAPI } from '@/lib/api';
 import Link from 'next/link';
-import { useState } from 'react';
+
+interface EventData {
+  eventId: string;
+  name: string;
+  description?: string;
+  location?: string;
+  participants: Array<{
+    walletAddress: string;
+    checkedInAt: string;
+  }>;
+}
 
 export default function EventPage() {
   const account = useCurrentAccount();
   const [eventId, setEventId] = useState<string>('');
-  const [selectedEventId, setSelectedEventId] = useState<bigint | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [event, setEvent] = useState<EventData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: event, isLoading: eventLoading } = useGetEvent(selectedEventId);
-  const { data: hasCheckedIn, isLoading: checkInLoading } = useHasCheckedIn(
-    selectedEventId,
-    account?.address || null
-  );
-
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (eventId.trim()) {
-      setSelectedEventId(BigInt(eventId));
+      setSelectedEventId(eventId);
     }
   };
+
+  // Load event data
+  useEffect(() => {
+    const loadEvent = async () => {
+      if (!selectedEventId) {
+        setEvent(null);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await qrCheckInAPI.getEvent(selectedEventId);
+        setEvent(data);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to load event';
+        setError(errorMsg);
+        setEvent(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadEvent();
+  }, [selectedEventId]);
 
   if (!account) {
     return (
@@ -82,40 +113,47 @@ export default function EventPage() {
         {/* Event Status */}
         {selectedEventId && (
           <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Trạng Thái</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Chi Tiết Sự Kiện</h2>
 
-            {eventLoading ? (
+            {loading ? (
               <div className="text-center py-8">
                 <p className="text-gray-600">⏳ Đang tải...</p>
               </div>
+            ) : error ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <p className="text-red-700">❌ {error}</p>
+              </div>
             ) : event ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Event Info */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <h3 className="font-semibold text-gray-800">
-                    📋 {typeof event === 'object' && 'name' in event ? (event as any).name : 'Event'}
-                  </h3>
-                  <p className="text-gray-600 mt-2">Event ID: {selectedEventId}</p>
+                  <h3 className="font-semibold text-lg text-gray-800 mb-2">{event.name}</h3>
+                  <p className="text-gray-600 text-sm mb-1">📍 {event.location || 'Không có địa điểm'}</p>
+                  <p className="text-gray-600 text-sm">📝 {event.description || 'Không có mô tả'}</p>
                 </div>
 
-                <div className={`rounded-lg p-6 text-center font-bold text-lg transition ${
-                  checkInLoading ? 'bg-gray-100 text-gray-600' : hasCheckedIn
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-orange-100 text-orange-700'
-                }`}>
-                  {checkInLoading ? (
-                    '⏳ Đang kiểm tra...'
-                  ) : hasCheckedIn ? (
-                    '✅ Bạn đã check-in sự kiện này'
+                {/* Participants List */}
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">
+                    👥 Danh Sách Check-in ({event.participants?.length || 0} người)
+                  </h3>
+                  {event.participants && event.participants.length > 0 ? (
+                    <div className="space-y-2">
+                      {event.participants.map((participant, index) => (
+                        <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <p className="font-mono text-sm text-gray-700">
+                            {participant.walletAddress?.slice(0, 10)}...{participant.walletAddress?.slice(-8)}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            ✅ {new Date(participant.checkedInAt).toLocaleString('vi-VN')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    '❌ Bạn chưa check-in sự kiện này'
+                    <p className="text-gray-600 text-center py-4">Chưa có ai check-in sự kiện này</p>
                   )}
                 </div>
-
-                {!hasCheckedIn && !checkInLoading && (
-                  <p className="text-center text-gray-600 text-sm">
-                    👉 Truy cập trang <Link href="/scan" className="text-blue-600 hover:underline">Quét QR Code</Link> để check-in ngay
-                  </p>
-                )}
 
                 <button
                   onClick={() => {

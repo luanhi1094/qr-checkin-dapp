@@ -4,16 +4,17 @@ import React from 'react';
 
 import { useState } from 'react';
 import { useCurrentAccount } from '@iota/dapp-kit';
-import { useCheckIn, useGetEvent } from '@/hooks/useContract';
+import { qrCheckInAPI } from '@/lib/api';
 import { QRScanner } from '@/components/QRScanner';
 import { ManualEventIdInput } from '@/components/ManualEventIdInput';
 import { IotaConnectButton } from '@/components/IotaConnectButton';
 import Link from 'next/link';
 
 interface EventInfo {
-  id: string;
+  eventId: string;
   name: string;
   description: string;
+  location: string;
 }
 
 export default function ScanPage() {
@@ -21,36 +22,46 @@ export default function ScanPage() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventInfo, setEventInfo] = useState<EventInfo | null>(null);
   const [tab, setTab] = useState<'qr' | 'manual'>('qr');
-
-  const { data: event } = useGetEvent(selectedEventId);
-  const { checkIn, isPending: isCheckingIn } = useCheckIn();
+  const [loading, setLoading] = useState(false);
+  const [checkInLoading, setCheckInLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleScanOrInput = async (eventId: string) => {
     setSelectedEventId(eventId);
-    // Fetch event info from contract
+    setError(null);
+    setLoading(true);
+    
     try {
-      // In a real app, you'd fetch from the contract
-      setEventInfo({
-        id: eventId,
-        name: `Event #${eventId}`,
-        description: 'Event từ blockchain',
-      });
-    } catch (error) {
-      alert('Không tìm thấy sự kiện này');
+      const data = await qrCheckInAPI.getEvent(eventId);
+      setEventInfo(data);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Không tìm thấy sự kiện này';
+      setError(errMsg);
+      alert(`❌ ${errMsg}`);
       setSelectedEventId(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCheckIn = async () => {
-    if (!selectedEventId) return;
+    if (!selectedEventId || !account?.address) return;
 
+    setCheckInLoading(true);
+    setError(null);
+    
     try {
-      await checkIn(selectedEventId);
+      // Call backend API to record check-in
+      await qrCheckInAPI.checkIn(selectedEventId, account.address, `tx_${Date.now()}`);
       alert('✅ Check-in thành công!');
       setSelectedEventId(null);
       setEventInfo(null);
-    } catch (error) {
-      alert(`❌ Lỗi: ${error instanceof Error ? error.message : 'Không xác định'}`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Check-in thất bại';
+      setError(errMsg);
+      alert(`❌ ${errMsg}`);
+    } finally {
+      setCheckInLoading(false);
     }
   };
 
@@ -129,7 +140,7 @@ export default function ScanPage() {
                 </p>
                 <ManualEventIdInput
                   onSubmit={handleScanOrInput}
-                  loading={false}
+                  loading={loading}
                 />
               </div>
             )}
@@ -141,24 +152,32 @@ export default function ScanPage() {
           <div className="bg-white rounded-lg shadow-lg p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Thông Tin Sự Kiện</h2>
 
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-red-700">❌ {error}</p>
+              </div>
+            )}
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
               <h3 className="text-xl font-bold text-gray-800 mb-2">{eventInfo.name}</h3>
-              <p className="text-gray-600 mb-4">{eventInfo.description}</p>
-              <p className="text-sm text-gray-500">Event ID: {eventInfo.id}</p>
+              <p className="text-gray-600 mb-2">{eventInfo.description}</p>
+              <p className="text-gray-600 text-sm mb-2">📍 {eventInfo.location || 'Không có địa điểm'}</p>
+              <p className="text-sm text-gray-500">Event ID: {eventInfo.eventId}</p>
             </div>
 
             <div className="flex gap-4">
               <button
                 onClick={handleCheckIn}
-                disabled={isCheckingIn}
+                disabled={checkInLoading}
                 className="flex-1 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 font-bold text-lg transition"
               >
-                {isCheckingIn ? '⏳ Đang Check-in...' : '✅ Check-in Ngay'}
+                {checkInLoading ? '⏳ Đang Check-in...' : '✅ Check-in Ngay'}
               </button>
               <button
                 onClick={() => {
                   setSelectedEventId(null);
                   setEventInfo(null);
+                  setError(null);
                 }}
                 className="px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-medium transition"
               >
