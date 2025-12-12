@@ -266,24 +266,16 @@ Contributions are welcome! Please:
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 👨‍💻 Author
 
 **Luan Hi** - [GitHub](https://github.com/luanhi1094)
 
-- 📧 Email: [your-email@example.com](mailto:your-email@example.com)
-- 🔗 LinkedIn: [Your Profile](https://linkedin.com)
-- 🐦 Twitter: [@YourHandle](https://twitter.com)
 
 ## 🆘 Support & Contact
 
 For questions, issues, or feature requests:
 - **Open an Issue**: [GitHub Issues](https://github.com/luanhi1094/qr-checkin-dapp/issues)
-- **Email**: your-email@example.com
-- **Discord**: [Join our server](#)
+
 
 ## 📡 Live Demo
 
@@ -297,6 +289,6 @@ For questions, issues, or feature requests:
 
 **⭐ If this project helped you, please consider giving it a star!**
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by [Nguyen_Luan]
 
 </div>
